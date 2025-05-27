@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Heart Animation with Confetti & Parachute Lovers</title>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script&family=Montserrat:wght@700&family=Mulish&display=swap" rel="stylesheet" />
+<style>
+  html, body {
+    margin: 0; padding: 0; overflow: hidden;
+    background: #FFB7C5;
+    height: 100vh;
+    font-family: 'Mulish', sans-serif;
+    user-select: none;
+  }
+  #bgText {
+    position: fixed;
+    top: 50%;
+    left: 100%;
+    white-space: nowrap;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    color: rgba(0,0,0,0.1);
+    transform: translateY(-50%);
+    pointer-events: none;
+    user-select: none;
+    animation: scrollText 20s linear infinite;
+    z-index: 0;
+    letter-spacing: 2px;
+  }
+  @keyframes scrollText {
+    0% { left: 100%; }
+    100% { left: -100%; }
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    background: transparent;
+    position: relative;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+<div id="bgText">ORXAN ASADLI tərəfindən &nbsp;&nbsp; ORXAN ASADLI tərəfindən &nbsp;&nbsp; ORXAN ASADLI tərəfindən &nbsp;&nbsp;</div>
+<canvas id="heartCanvas" width="600" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById('heartCanvas');
+const ctx = canvas.getContext('2d');
+
+const width = canvas.width;
+const height = canvas.height;
+
+let progress = 0; // 0 to 1 heart outline progress
+let heartComplete = false;
+let textOpacity = 0;
+let heartScale = 1;
+let heartBeatSpeed = 0.07;
+let heartBeatPhase = 0;
+
+// Confetti Particle class
+class ConfettiParticle {
+  constructor() {
+    this.x = Math.random() * width;
+    this.y = Math.random() * height - height;
+    this.size = 4 + Math.random() * 6;
+    this.speedY = 2 + Math.random() * 2.5;
+    this.color = `hsl(${Math.random() * 360}, 100%, 60%)`;
+    this.angle = Math.random() * Math.PI * 2;
+    this.spin = 0.1 + Math.random() * 0.3;
+  }
+  update() {
+    this.y += this.speedY;
+    this.angle += this.spin;
+    if (this.y > height) {
+      this.y = -this.size;
+      this.x = Math.random() * width;
+    }
+  }
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    ctx.fillStyle = this.color;
+    ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+    ctx.restore();
+  }
+}
+
+// Parachute Lover class - small hearts swinging down
+class ParachuteLover {
+  constructor() {
+    this.x = Math.random() * width;
+    this.y = -20 - Math.random() * 400;
+    this.size = 18 + Math.random() * 12;
+    this.speedY = 1 + Math.random() * 1.4;
+    this.swingPhase = Math.random() * Math.PI * 2;
+    this.swingAmplitude = 25 + Math.random() * 15;
+  }
+  update() {
+    this.y += this.speedY;
+    this.swingPhase += 0.03;
+    if (this.y > height + this.size) {
+      this.y = -this.size - Math.random() * 300;
+      this.x = Math.random() * width;
+    }
+  }
+  draw() {
+    const swingX = this.swingAmplitude * Math.sin(this.swingPhase);
+    ctx.save();
+    ctx.translate(this.x + swingX, this.y);
+
+    // Parachute string
+    ctx.strokeStyle = "rgba(255, 105, 180, 0.7)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, this.size * 1.5);
+    ctx.stroke();
+
+    // Heart shape (lover)
+    ctx.fillStyle = "hotpink";
+    ctx.beginPath();
+    const s = this.size / 20;
+    ctx.moveTo(0, -10 * s);
+    ctx.bezierCurveTo(0, -15 * s, -10 * s, -15 * s, -10 * s, -5 * s);
+    ctx.bezierCurveTo(-10 * s, 0, 0, 5 * s, 0, 10 * s);
+    ctx.bezierCurveTo(0, 5 * s, 10 * s, 0, 10 * s, -5 * s);
+    ctx.bezierCurveTo(10 * s, -15 * s, 0, -15 * s, 0, -10 * s);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+const confettis = [];
+for(let i=0; i<100; i++) confettis.push(new ConfettiParticle());
+
+const parachuteLovers = [];
+for(let i=0; i<20; i++) parachuteLovers.push(new ParachuteLover());
+
+function drawHeartPoint(t) {
+  // Heart parametric formula
+  const x = 16 * Math.pow(Math.sin(t), 3);
+  const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+  return [x, y];
+}
+
+function drawHeartOutline(progress) {
+  ctx.beginPath();
+  const maxT = Math.PI * 2 * progress;
+  for(let t=0; t<=maxT; t+=0.02) {
+    const [x,y] = drawHeartPoint(t);
+    if(t===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle = "red";
+  ctx.lineWidth = 0.3;
+  ctx.stroke();
+}
+
+function drawHeartFilled(scale) {
+  ctx.beginPath();
+  for(let t=0; t<=Math.PI*2; t+=0.02){
+    const [x,y] = drawHeartPoint(t);
+    if(t===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = "red";
+  ctx.fill();
+
+  // Neon glow effect
+  for(let i=0; i<5; i++){
+    ctx.lineWidth = 1 + i*2;
+    ctx.strokeStyle = `rgba(255,0,0,${0.2/(i+1)})`;
+    ctx.shadowColor = "red";
+    ctx.shadowBlur = 20 - i*3;
+    ctx.stroke();
+  }
+}
+
+function animate(){
+  ctx.clearRect(0, 0, width, height);
+
+  ctx.save();
+  ctx.translate(width/2, height/2 + 50);
+
+  // Heart outline drawing progress
+  if(progress < 1){
+    progress += 0.008;
+    drawHeartOutline(progress);
+  } else {
+    heartComplete = true;
+  }
+
+  // If heart complete: fill & heartbeat
+  if(heartComplete){
+    heartBeatPhase += heartBeatSpeed;
+    heartScale = 1 + 0.05 * Math.sin(heartBeatPhase);
+    ctx.scale(10 * heartScale, 10 * heartScale);
+    drawHeartFilled(heartScale);
+  } else {
+    ctx.scale(10,10);
+  }
+
+  ctx.restore();
+
+  // Confetti + parachute lovers + text
+  if(heartComplete){
+    // Draw confetti
+    confettis.forEach(p=>{
+      p.update();
+      p.draw();
+    });
+
+    // Draw parachute lovers
+    parachuteLovers.forEach(p=>{
+      p.update();
+      p.draw();
+    });
+
+    // Text fade in with heartbeat scale sync
+    if(textOpacity < 1) textOpacity += 0.015;
+
+    ctx.font = `bold 72px 'Dancing Script', cursive`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.shadowColor = "rgba(0,255,255,0.8)";
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    const textScale = 1 + 0.07 * Math.sin(heartBeatPhase * 1.5);
+    ctx.save();
+    ctx.translate(width/2, height/2 + 50);
+    ctx.scale(textScale, textScale);
+
+    ctx.fillStyle = `rgba(255,255,255,${textOpacity})`;
+    ctx.fillText("DODİM", 0, 0);
+    ctx.restore();
+  }
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+
+</body>
+</html>
+
+
